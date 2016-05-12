@@ -1,5 +1,4 @@
 require 'digest'
-require 'active_support/logger'
 
 module ChainLog
 
@@ -7,49 +6,61 @@ module ChainLog
 
     def initialize
       @num=0
-      @skipped=0
       @invalid=0
-      @prev_line=nil
-      @prev_hash=nil
+      @computed_hash=nil
     end
 
     #------------------------------------------
+    # caller must ensure line does not contain newline at end (use strip or chomp)
     # assumes that line ends with ";xxxxxx"
     # where xxxxxx is a 6-character suffix of the SHA256
     #------------------------------------------
-    def self.extract_hash_from_line(line)
-      hash = line.strip[-7..-1]
+    def self.extract_hash_from_line(stripped_line)
+      hash = stripped_line[-7..-1]
       return nil if hash.length < 7 || hash[0] != ';'
       hash[1..-1]
+    end
+
+    #------------------------------------------
+    # is_valid_hash
+    # side-effect: updates @computed_hash
+    # returns: nil if @computed_hash not yet set
+    #         true if hash in line matches @computed_hash, false otherwise
+    #------------------------------------------
+    def is_valid_hash(stripped_line)
+      valid_chain=nil
+      provided_hash = Parser.extract_hash_from_line stripped_line
+      if @computed_hash
+        valid_chain= (@computed_hash == provided_hash)
+      end
+
+      # compute hash of this line for next call
+
+      @computed_hash = ChainLog::Formatter.hash_str(stripped_line)
+
+      valid_chain
     end
 
     #------------------------------------------
     # parse_line
     #------------------------------------------
     def parse_line(line)
-      @num += 1
-      hash = Parser.extract_hash_from_line line
-      if @prev_line
-        computed_prev_hash=ChainLog::Logger.hash_str(@prev_line.strip)
-        valid_chain= computed_prev_hash == hash
-        #puts "#{hash} vs h(prev) #{computed_prev_hash}"
-        @invalid += 1 unless valid_chain
-      else
-        valid_chain=true
-      end
-      @prev_line = line
-      @prev_hash = hash
 
+      stripped_line=line.chomp
+      valid_chain=is_valid_hash(stripped_line)
+      @invalid += 1 if valid_chain === false
+
+      @num += 1
+
+      # TODO:
 
       a=line.split(' ',3)
       sev=a[0]
       ts=a[1]
       msg=a[2]
+      provided_hash = Parser.extract_hash_from_line stripped_line
 
-      @num += 1
-
-      {severity:sev, ts:ts, message:msg, hash:hash, valid_chain: valid_chain}
-
+      {severity:sev, ts:ts, message:msg, hash:provided_hash, valid_chain: valid_chain}
     end
 
     def num
@@ -67,7 +78,7 @@ module ChainLog
           while true
             line = f.gets
             break if line.nil?
-            next if line[0] == '#'    # first line in log file
+            next if @num == 0 && line[0] == '#'    # first line in log file, not seen by formatter
 
             obj = parse_line(line)
             yield line, obj
