@@ -3,23 +3,23 @@ require 'chainlog'
 
 parser = ChainLog::Parser.new
 
-if ARGV.length < 1
-  puts "Usage: <script> [-v] filename"
-  exit 1
-end
+# copy args without -v and set verbose flag
+args=[]
+ARGV.each {|arg|
+  args<<arg unless arg=='-v'
+  parser.verbose=true if arg=='-v'
+}
 
-i=0
-if ARGV[i] == '-v'
-  parser.verbose=true
-  i+=1
-end
+# are we reading from file or stdin?
 
-if ARGV.length < i+1
+if args.length < 1
   puts "reading from stdin"
   file=STDIN
 else
-  file=ARGV[i]
+  file=ARGV.last
 end
+
+# run
 
 err,num_lines = parser.verify_file(file)
 if err
