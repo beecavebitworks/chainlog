@@ -1,47 +1,30 @@
-require 'singleton'
 
 module ChainLog
 
-  class Formatter
-    def initialize
-      @single = FormatterSingleton.instance
-    end
-    def call(severity, time, progname, msg)
-      @single.call(severity, time, progname, msg)
-    end
-    def self.hash_str(line)
-      Digest::SHA256.hexdigest(line)[-6..-1]
-    end
-
-    def reset
-      @single.reset
-    end
-
-  end
-
   # formatter for log messages that includes hash chaining
 
-  class FormatterSingleton
+  class Formatter
 
-    include Singleton
-
-    Format = "%s %s %d %s %s : %s"
+    Format = "%s %s [%d,%s,%s,%s,%s] : %s"
+    NUM_FIELDS=5
+    FIELD_NAMES=%w(pid,program,thread,line,chain)
+    HASH_LEN=4
 
     attr_accessor :datetime_format
 
     def initialize
       @datetime_format = nil
-      reset
       @lock = Mutex.new
-    end
 
-    def reset
       @dup_mode = true
-
       @last_hash = Formatter.hash_str('') # 52b855
       @last_message = nil
       @last_output = nil
       @num=0
+    end
+
+    def self.hash_str(line)
+      Digest::SHA256.hexdigest(line)[-HASH_LEN..-1]
     end
 
     def call(severity, time, progname, msg)
@@ -60,11 +43,18 @@ module ChainLog
           return @last_output if @last_message == msg && (@num % 2 == 0)
         end
 
-        s= Format % [severity[0..0], format_datetime(time), $$, progname, Thread.current.object_id.to_s + '-' + @num.to_s , msg2str(msg)]
+        tid = Thread.current.object_id.to_s(16)[-3..-1]
+        lineno = @num
+        lineno = (@num + 1) / 2 if @dup_mode    # without this, would read 1, 3, 5, 7, ...
+        lineno = lineno.to_s[-1..-1]
 
-        # append hash of last line
+        pname=progname
+        # make sure program name, if present, does not have spaces. For parsing reasons
+        pname=pname.gsub(' ','_') unless pname.nil?
 
-        s << " ;#{@last_hash}"
+        s= Format % [severity[0..0], format_datetime(time),
+                     $$, pname, tid, lineno , @last_hash,
+                     msg2str(msg)]
 
         # create hash of this line for use next time
 

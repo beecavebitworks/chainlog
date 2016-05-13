@@ -15,7 +15,6 @@ class FormatterTest < Minitest::Test
     clean_temp_log
     logger = Logger.new(TEMP_LOG)
     logger.formatter = ChainLog::Formatter.new
-    logger.formatter.reset
     logger.warn "hola"
 
     obj={a:1, b:'32233'}
@@ -50,9 +49,9 @@ class FormatterTest < Minitest::Test
 
   def test_validate
     str = <<-EOS
-W 2016-05-12T09:39:23.137259 5490 : hola ;52b855
-E 2016-05-12T09:39:23.137327 5490 : something gone wrong {"a":1,"b":"32233"} ;6e2ef1
-I 2016-05-12T09:39:23.137348 5490 : {"a":1,"b":"32233"} ;412205
+W 2016-05-13T16:02:06.200431 [19760,,1dc,1,b855] : hola
+E 2016-05-13T16:02:06.200489 [19760,,1dc,2,5bd7] : something gone wrong {"a":1,"b":"32233"}
+I 2016-05-13T16:02:06.200510 [19760,,1dc,3,b4ea] : {"a":1,"b":"32233"}
 EOS
 
     parser = ChainLog::Parser.new
@@ -69,7 +68,6 @@ EOS
     clean_temp_log
     logger = Logger.new(TEMP_LOG)
     logger.formatter = ChainLog::Formatter.new
-    logger.formatter.reset
 
     stdout_logger = Logger.new(STDOUT)
     stdout_logger.formatter = logger.formatter
@@ -87,6 +85,22 @@ EOS
     err,num_lines = parser.verify_file(TEMP_LOG)
     assert err===false, err
     assert_equal 6,num_lines
+  end
+
+  # a log where multiple processes, and therefore more than one formatter instance writing to log
+  def test_mult_pids
+    str =<<-EOS
+I 2016-05-13T16:06:02.702771 [19893,,16c,2,6435] :   Parameters: {"flash"=>"false"}
+I 2016-05-13T16:06:02.705831 [19893,,16c,3,58fb] : Completed 200 OK in 3ms (Views: 0.4ms | ActiveRecord: 0.0ms)
+D 2016-05-13T16:06:03.193366 [19892,,d84,5,f82f] :
+D 2016-05-13T16:06:03.193544 [19892,,d84,6,9b54] :
+I 2016-05-13T16:06:03.193710 [19892,,d84,7,3e40] : Started GET "/" for ::1 at 2016-05-13 16:06:03 -0500
+EOS
+    parser = ChainLog::Parser.new
+    str.split("\n").each { |line|
+      val = parser.is_valid_hash(line.chomp)
+      assert !(val === false), "Invalid chain on line #{line}"
+    }
   end
 
 end
