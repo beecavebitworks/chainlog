@@ -28,7 +28,13 @@ I 2016-05-13T16:06:03.193710 [19892,,d84,7,3e40] : Started GET "/" for ::1 at 20
 The first character is the log severity (I=Info, D=Debug, W=Warn,etc.)
 The bracketed section after the timestamp contains the following fields:
 
-process_id,program_name,tread_identifier,single_digit_line_count,hash_chain_suffix
+| Field Name | Description |
+|-------------|
+|pid         | The process id |
+|progname    | Name of the program... often empty |
+|thread_id   | Thread identifier. Last 3 hex chars of Thread.current.object_id |
+|line_counter| Single digit rolling counter for the pid |
+|hash_chain  | Last 4 chars of SHA-256 of previous log entry for same pid |
 
 # Verifying with a script
 
