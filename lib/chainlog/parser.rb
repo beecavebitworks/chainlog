@@ -5,9 +5,8 @@ module ChainLog
   class Parser
 
     def initialize
-      @num=0
-      @invalid=0
-      @computed_hash=nil
+      @verbose=false
+      _reset
     end
 
     #------------------------------------------
@@ -37,6 +36,10 @@ module ChainLog
       # compute hash of this line for next call
 
       @computed_hash = ChainLog::Formatter.hash_str(stripped_line)
+      if @verbose
+        puts stripped_line
+        puts @computed_hash
+      end
 
       valid_chain
     end
@@ -71,7 +74,14 @@ module ChainLog
       @invalid
     end
 
+    def verbose=(val)
+      @verbose=val
+    end
+
+    #------------------------------------------
+    #------------------------------------------
     def parse_file(file_path) # with block
+      _reset
       begin
         File.open(file_path) { |f|
 
@@ -90,6 +100,51 @@ module ChainLog
         puts ex.backtrace
       end
     end
+
+    #------------------------------------------
+    # returns [err_msg, num_lines]
+    # where
+    #   err_msg === false on success, string message otherwise
+    #   num_lines is integer number of lines read before returning
+    #------------------------------------------
+    def verify_file(file_path) # with block
+      _reset
+      begin
+        f = file_path
+        f = File.open(file_path) if file_path.is_a? String
+
+
+          while true
+            line = f.gets
+            break if line.nil?
+            @num += 1
+            next if @num == 1 && line[0] == '#'    # first line in log file, not seen by formatter
+
+            valid_hash = is_valid_hash line.chomp
+            if valid_hash === false
+              err= "ERROR: hash chain broken at line #{@num}:\n#{line}"
+              return err, @num
+            end
+          end
+
+        f.close
+
+      rescue Exception => ex
+        msg= "Exception:#{ex.message}"
+        puts msg
+        puts ex.backtrace
+        return msg,@num
+      end
+
+      return false,@num
+    end
+
+    def _reset
+      @num=0
+      @invalid=0
+      @computed_hash=nil
+    end
+
   end
 
 end

@@ -39,6 +39,12 @@ class FormatterTest < Minitest::Test
     parser.parse_file(TEMP_LOG) { |line, item|
       assert !(item[:valid_chain] === false), "Invalid chain on line #{line}"
     }
+
+    parser = ChainLog::Parser.new
+    err,num_lines = parser.verify_file(TEMP_LOG)
+    assert err===false, err
+    assert_equal 4,num_lines
+
   end
 
   def test_validate
@@ -55,5 +61,30 @@ EOS
     }
   end
 
+  def test_dup_log
+
+    # emulates rails stdout_logger in development.  The formatter is shared between two loggers
+
+    clean_temp_log
+    logger = Logger.new(TEMP_LOG)
+    logger.formatter = ChainLog::Formatter.new
+
+    stdout_logger = Logger.new(STDOUT)
+    stdout_logger.formatter = logger.formatter
+
+    ["", "some message 1", "another message 2", "", "third times a charm 3"].each {|msg|
+      logger.info msg
+      stdout_logger.info msg
+    }
+    logger=nil
+    stdout_logger=nil
+
+    # verify
+
+    parser = ChainLog::Parser.new
+    err,num_lines = parser.verify_file(TEMP_LOG)
+    assert err===false, err
+    assert_equal 6,num_lines
+  end
 
 end
