@@ -15,6 +15,7 @@ class FormatterTest < Minitest::Test
     clean_temp_log
     logger = Logger.new(TEMP_LOG)
     logger.formatter = ChainLog::Formatter.new
+    logger.formatter.reset
     logger.warn "hola"
 
     obj={a:1, b:'32233'}
@@ -68,6 +69,7 @@ EOS
     clean_temp_log
     logger = Logger.new(TEMP_LOG)
     logger.formatter = ChainLog::Formatter.new
+    logger.formatter.reset
 
     stdout_logger = Logger.new(STDOUT)
     stdout_logger.formatter = logger.formatter
