@@ -49,6 +49,6 @@ or
 ```ruby
 require 'chainlog'
 parser = ChainLog::Parser.new
-err,num_lines = parser.verify_file(file_path)
+err,num_lines = parser.parse_file(file_path)
 alert_user if err
 ```
