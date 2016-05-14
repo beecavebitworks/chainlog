@@ -7,6 +7,8 @@ class FormatterTest < Minitest::Test
 
   TEMP_LOG='./test/fff123.log'
   MULTILINE_LOG='./test/excep_log'
+  MISSING_LOG='./test/missing_log'
+  ALTERED_LOG='./test/altered_log'
 
   def clean_temp_log
     File.delete TEMP_LOG if File.exist? TEMP_LOG
@@ -37,12 +39,12 @@ class FormatterTest < Minitest::Test
     }
 
     parser = ChainLog::Parser.new
-    parser.parse_file(TEMP_LOG) { |line, entry|
-      assert !(entry.hash_chain_broken?), "Invalid chain on line #{line}"
+    parser.parse_file(TEMP_LOG) { |entry|
+      assert !(entry.hash_chain_broken?), "Invalid chain on line #{entry.line}"
     }
 
     parser = ChainLog::Parser.new
-    err,num_lines = parser.verify_file(TEMP_LOG)
+    err,num_lines = parser.parse_file(TEMP_LOG)
     assert err===false, err
     assert_equal 3,num_lines
 
@@ -71,7 +73,7 @@ EOS
     logger = Logger.new(TEMP_LOG)
     logger.formatter = ChainLog::Formatter.new
 
-    stdout_logger = Logger.new(STDOUT)
+    stdout_logger = Logger.new('/dev/null')
     stdout_logger.formatter = logger.formatter
 
     ["", "some message 1", "another message 2", "", "third times a charm 3"].each {|msg|
@@ -84,7 +86,7 @@ EOS
     # verify
 
     parser = ChainLog::Parser.new
-    err,num_lines = parser.verify_file(TEMP_LOG)
+    err,num_lines = parser.parse_file(TEMP_LOG)
     assert err===false, err
     assert_equal 5,num_lines
   end
@@ -108,11 +110,69 @@ EOS
   end
 
   def test_multi_line
+
+    # without block
+
     parser = ChainLog::Parser.new
-    err,num_lines = parser.verify_file(MULTILINE_LOG)
+    err,num_lines = parser.parse_file(MULTILINE_LOG)
     assert err===false, err
     assert_equal 5,num_lines
 
+    # with block
+
+    parser = ChainLog::Parser.new
+    parser.parse_file(MULTILINE_LOG) { |entry|
+      assert !(entry.hash_chain_broken?), "Invalid chain on line #{entry.line}"
+    }
+
+  end
+
+  def test_missing_line
+
+    # without block
+
+    parser = ChainLog::Parser.new
+    err,num_lines = parser.parse_file(MISSING_LOG)
+    assert err, "should have failed"
+    assert_equal 3,num_lines
+
+    # with block
+
+    parser = ChainLog::Parser.new
+    i=0
+    parser.parse_file(MISSING_LOG) { |entry|
+      if i < 2
+        assert_equal false, entry.hash_chain_broken?, "hash chain should be good on line #{i}"
+      else
+        assert_equal true, entry.hash_chain_broken?
+      end
+
+      i += 1
+    }
+ end
+
+  def test_altered
+
+    # without block
+
+    parser = ChainLog::Parser.new
+    err,num_lines = parser.parse_file(ALTERED_LOG)
+    assert err, "should have failed"
+    assert_equal 4,num_lines
+
+    # with block
+
+    parser = ChainLog::Parser.new
+    i=0
+    parser.parse_file(ALTERED_LOG) { |entry|
+      if i < 3
+        assert_equal false, entry.hash_chain_broken?, "hash chain should be good on line #{i}"
+      else
+        assert_equal true, entry.hash_chain_broken?
+      end
+
+      i += 1
+    }
   end
 
 end

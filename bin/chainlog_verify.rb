@@ -21,7 +21,7 @@ end
 
 # run
 
-err,num_lines = parser.verify_file(file)
+err,num_lines = parser.parse_file(file)
 if err
   puts err
 else

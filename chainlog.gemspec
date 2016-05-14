@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'chainlog'
-  s.version     = '0.9.1'
+  s.version     = '0.9.2'
   s.date        = '2016-05-14'
   s.summary     = "A Rails Logger formatter/parser that includes hash chain and JSON serialization"
   s.description = <<-EOS
