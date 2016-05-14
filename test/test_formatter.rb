@@ -36,8 +36,8 @@ class FormatterTest < Minitest::Test
     }
 
     parser = ChainLog::Parser.new
-    parser.parse_file(TEMP_LOG) { |line, item|
-      assert !(item.valid_chain === false), "Invalid chain on line #{line}"
+    parser.parse_file(TEMP_LOG) { |line, entry|
+      assert !(entry.hash_chain_broken?), "Invalid chain on line #{line}"
     }
 
     parser = ChainLog::Parser.new
@@ -102,6 +102,10 @@ EOS
       val = parser.is_valid_hash(line.chomp)
       assert !(val === false), "Invalid chain on line #{line}"
     }
+  end
+
+  def test_parse_file
+
   end
 
 end

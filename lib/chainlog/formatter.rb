@@ -1,13 +1,21 @@
 
 module ChainLog
 
-  # formatter for log messages that includes hash chaining
-
+  # formatter for log messages that includes hash chaining.  Based on Logger.Formatter
+  # Enable in config/environment.rb with:
+  #
+  # Rails.application.config.log_formatter = ChainLog::Formatter.new
+  #
   class Formatter
 
-    Format = "%s %s [%d,%s,%s,%s,%s] : %s"
-    NUM_FIELDS=5
+    # Names of meta-data fields
+
     FIELD_NAMES=%w(pid,program,thread,line,chain)
+
+    # Number of meta-data fields
+    NUM_FIELDS=5
+
+    # Number of hex chars of SHA digest to keep
     HASH_LEN=4
 
     attr_accessor :datetime_format
@@ -23,10 +31,17 @@ module ChainLog
       @num=0
     end
 
+    #########
+    # return HASH_LEN hex chars of SHA256(line)
+    # @param line Formatted log entry without trailing newlines
+    #########
     def self.hash_str(line)
       Digest::SHA256.hexdigest(line)[-HASH_LEN..-1]
     end
 
+    #########
+    # Called by Logger to format line
+    #########
     def call(severity, time, progname, msg)
       @lock.synchronize {
         @num += 1
@@ -52,9 +67,10 @@ module ChainLog
         # make sure program name, if present, does not have spaces. For parsing reasons
         pname=pname.gsub(' ','_') unless pname.nil?
 
-        s= Format % [severity[0..0], format_datetime(time),
-                     $$, pname, tid, lineno , @last_hash,
-                     msg2str(msg)]
+        s= "%s %s [%d,%s,%s,%s,%s] : %s" % [
+             severity[0..0], format_datetime(time),
+             $$, pname, tid, lineno , @last_hash,
+             msg2str(msg)]
 
         # create hash of this line for use next time
 

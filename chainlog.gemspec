@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'chainlog'
-  s.version     = '0.9.0'
+  s.version     = '0.9.1'
   s.date        = '2016-05-14'
   s.summary     = "A Rails Logger formatter/parser that includes hash chain and JSON serialization"
   s.description = <<-EOS
@@ -12,4 +12,6 @@ EOS
   s.executables << 'chainlog_verify.rb'
   s.homepage    = 'https://github.com/beecavebitworks/chainlog'
   s.license     = 'Apache 2.0'
+  s.add_development_dependency 'rake','~> 9.0'
+  s.add_development_dependency 'yard','~> 0.5'
 end
