@@ -1,6 +1,6 @@
 namespace :chainlog do
 
-  require 'chainlog'
+  require './lib/chainlog'
 
   task :verify, [:file] do |t, args|
     parser = ChainLog::Parser.new

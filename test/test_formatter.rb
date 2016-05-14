@@ -6,6 +6,7 @@ require 'json'
 class FormatterTest < Minitest::Test
 
   TEMP_LOG='./test/fff123.log'
+  MULTILINE_LOG='./test/excep_log'
 
   def clean_temp_log
     File.delete TEMP_LOG if File.exist? TEMP_LOG
@@ -56,8 +57,9 @@ EOS
 
     parser = ChainLog::Parser.new
     str.split("\n").each { |line|
-      val = parser.is_valid_hash(line.chomp)
-      assert !(val === false), "Invalid chain on line #{line}"
+      entry = parser.parse_and_validate_line line
+      assert !entry.nil?, "parse error on line #{line}"
+      assert !entry.hash_chain_broken?, "Hash chain broken on line #{line}"
     }
   end
 
@@ -99,12 +101,17 @@ I 2016-05-13T16:06:03.193710 [19892,,d84,7,3e40] : Started GET "/" for ::1 at 20
 EOS
     parser = ChainLog::Parser.new
     str.split("\n").each { |line|
-      val = parser.is_valid_hash(line.chomp)
-      assert !(val === false), "Invalid chain on line #{line}"
+      entry = parser.parse_and_validate_line line
+      assert !entry.nil?, "Parse error on line #{line}"
+      assert !entry.hash_chain_broken? ,"Invalid chain on line #{line}"
     }
   end
 
-  def test_parse_file
+  def test_multi_line
+    parser = ChainLog::Parser.new
+    err,num_lines = parser.verify_file(MULTILINE_LOG)
+    assert err===false, err
+    assert_equal 5,num_lines
 
   end
 

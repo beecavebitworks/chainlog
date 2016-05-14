@@ -12,6 +12,4 @@ EOS
   s.executables << 'chainlog_verify.rb'
   s.homepage    = 'https://github.com/beecavebitworks/chainlog'
   s.license     = 'Apache 2.0'
-  s.add_development_dependency 'rake','~> 9.0'
-  s.add_development_dependency 'yard','~> 0.5'
 end

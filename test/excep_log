@@ -1,0 +1,10 @@
+I 2016-05-14T16:49:57.986749 [28777,,624,5,24f2] : some basic info here {"some_key":"some value"}
+E 2016-05-14T16:49:57.986918 [28777,,624,6,0a7e] : some basic error here {"some_key":"some value"}
+I 2016-05-14T16:49:57.988231 [28777,,624,7,303b] : Completed 500 Internal Server Error in 9ms (ActiveRecord: 0.0ms)
+F 2016-05-14T16:49:57.989247 [28777,,624,8,712b] : 
+NoMethodError (undefined method `exception' for #<ActiveSupport::Logger:0x007fd84cc31a78>):
+  app/controllers/sploits_controller.rb:13:in `rescue in index'
+  app/controllers/sploits_controller.rb:10:in `index'
+
+
+I 2016-05-14T16:49:58.114552 [28777,,624,9,6e7b] :   Rendered /Users/alexm/.rbenv/versions/2.2.4/lib/ruby/gems/2.2.0/gems/actionpack-4.2.5.1/lib/action_dispatch/middleware/templates/rescues/_source.erb (3.4ms)
