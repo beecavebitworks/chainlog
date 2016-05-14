@@ -1,10 +1,10 @@
 # chainlog
 This gem provides Rails logger with two key features:
 ###hash chain
-  Each line contains part of a SHA-256 digest of the previous line.
+  Each line contains part of a SHA-256 digest of the previous line. When a server has been compromised, the intruders will often try to alter the log files to cover their tracks.  With this meta-data embedded, tampering of the log file can be detected (using script provided or programmatically).
 ###json
   log a hash dictionary and it will be written as json, which is automatically supported by many log management utilities.  Use this to tag your logs with metadata that can be correlated across containers and tiers.
-  
+
 A parser is provided to verify entire log files or snippets.
 Each process gets it's own copy of the logger, so a log file will have chains for each process intermingled.  The Parser handles this case.
 
@@ -34,7 +34,7 @@ pid         | The process id
 progname    | Name of the program... often empty
 thread_id   | Thread identifier. Last 3 hex chars of Thread.current.object_id
 line_counter| Single digit rolling counter for the pid
-hash_chain  | Last 4 chars of SHA-256 of previous log entry for same pid
+hash_chain  | Last 4 hex chars of SHA-256 of previous log entry for same pid
 
 # Verifying with a script
 
