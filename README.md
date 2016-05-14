@@ -38,11 +38,11 @@ The bracketed section after the timestamp contains the following fields:
 
 # Verifying with a script
 
-`./bin/chainlog_verify.rb path/to/some.log`
+`chainlog_verify.rb path/to/some.log`
 
 or
 
-`tail -50 path/to/some.log | ./bin/chainlog_verify.rb`
+`tail -50 path/to/some.log | chainlog_verify.rb`
 
 # Verifying programmatically
 

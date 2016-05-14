@@ -12,15 +12,7 @@ module ChainLog
     #------------------------------------------
     # caller must ensure line does not contain newline at end (use chomp)
     #------------------------------------------
-#    def self.extract_hash_from_line(stripped_line)
-#
-#      fields = extract_fields_from_line(stripped_line)
-#      hash = fields[4]
-#      return nil if hash.length < ChainLog::Formatter::HASH_LEN
-#      hash
-#    end
-
-    def self.extract_fields_from_line(stripped_line)
+    def self.parse_entry(stripped_line)
 
       return nil if stripped_line.nil? || stripped_line.length <= 0
       meta,msg = stripped_line.split(' : ',2)
@@ -31,67 +23,57 @@ module ChainLog
       fields = fields_str.split(',')
       return nil if fields.length != ChainLog::Formatter::NUM_FIELDS
 
-      return fields
+      return Entry.new(parts[0], parts[1], fields, msg)
     end
 
     #------------------------------------------
     # is_valid_hash
-    # side-effect: updates @computed_hash
+    # side-effect: updates @@pid_to_computed_hash_map
     # returns: nil if @computed_hash not yet set
     #         true if hash in line matches @computed_hash, false otherwise
     #------------------------------------------
-    def is_valid_hash(stripped_line)
-      valid_chain=nil
+    def is_valid_hash(stripped_line, entry=nil)
 
-      fields = Parser.extract_fields_from_line(stripped_line)
+      entry = Parser.parse_entry(stripped_line) if entry.nil?
+      return false if entry.nil?
+      return false unless entry.parse_ok?
 
-      pid=fields.first
-      provided_hash = fields.last
-
-      if @pid_to_computed_hash_map.has_key?(pid)
-        valid_chain= (@pid_to_computed_hash_map[pid] == provided_hash)
+      if @pid_to_computed_hash_map.has_key?(entry.pid)
+        entry.valid_chain = (@pid_to_computed_hash_map[entry.pid] == entry.hash)
       end
 
       # compute hash of this line for next call
 
-      @pid_to_computed_hash_map[pid] = ChainLog::Formatter.hash_str(stripped_line)
+      @pid_to_computed_hash_map[entry.pid] = ChainLog::Formatter.hash_str(stripped_line)
       if @verbose
-        puts stripped_line
-        puts @pid_to_computed_hash_map[pid]
+        puts '"' + stripped_line + '"'
+        puts @pid_to_computed_hash_map[entry.pid]
       end
 
-      valid_chain
+      entry.valid_chain
     end
 
     #------------------------------------------
-    # parse_line
+    # parse_and_validate_line
+    # returns ChainLog::Entry instance
     #------------------------------------------
-    def parse_line(line)
+    def parse_and_validate_line(line)
 
       stripped_line=line.chomp
-      valid_chain=is_valid_hash(stripped_line)  # TODO: use fields
-      @invalid += 1 if valid_chain === false
+      entry = Parser.parse_entry(stripped_line)
 
+      valid_chain=is_valid_hash(stripped_line, entry)
+      @invalid += 1 if valid_chain === false
       @num += 1
 
-      # TODO:
-
-      a=line.split(' ',3)
-      sev=a[0]
-      ts=a[1]
-      msg=a[2]
-      fields = Parser.extract_fields_from_line(stripped_line)
-
-      pid=fields.first
-      provided_hash = fields.last
-
-      {severity:sev, ts:ts, message:msg, hash:provided_hash, valid_chain: valid_chain}
+      entry
     end
 
     def num
       @num
     end
 
+    # return number of invalid lines
     def invalid
       @invalid
     end
@@ -112,7 +94,7 @@ module ChainLog
             break if line.nil?
             next if @num == 0 && line[0] == '#'    # first line in log file, not seen by formatter
 
-            obj = parse_line(line)
+            obj = parse_and_validate_line(line)
             yield line, obj
           end
 
@@ -139,11 +121,10 @@ module ChainLog
           while true
             line = f.gets
             break if line.nil?
-            @num += 1
-            next if @num == 1 && line[0] == '#'    # first line in log file, not seen by formatter
+            next if @num == 0 && line[0] == '#'    # first line in log file, not seen by formatter
 
-            valid_hash = is_valid_hash line.chomp
-            if valid_hash === false
+            entry = parse_and_validate_line(line)
+            if entry.hash_chain_broken?
               err= "ERROR: hash chain broken at line #{@num}:\n#{line}"
               return err, @num
             end
@@ -167,6 +148,46 @@ module ChainLog
       @pid_to_computed_hash_map={}
     end
 
+  end
+
+  class Entry
+    attr_reader :severity, :ts, :msg
+    attr_accessor :valid_chain
+
+    def initialize(sev, ts, fields, msg)
+      @severity=sev
+      @ts=ts
+      @fields=fields
+      @msg=msg
+      @valid_chain=nil
+    end
+
+    def fields
+      @fields
+    end
+
+    def hash
+      @fields.last
+    end
+
+    def pid
+      @fields.first
+    end
+
+    def hash_chain_broken?
+      @valid_chain === false
+    end
+
+    def parse_ok?
+      return false if @severity.nil? || @severity.length != 1
+      return false if @fields.nil? || @fields.length < ChainLog::Formatter::NUM_FIELDS
+      true
+    end
+
+    def to_s
+      return "sev:#{@severity} ts:#{@ts} msg:'#{@msg}'" if fields.nil?
+      "pid:#{pid} hash:#{hash} sev:#{@severity} ts:#{@ts}"
+    end
   end
 
 end
